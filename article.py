@@ -1,4 +1,4 @@
-from pybliometrics.scopus import AbstractRetrieval
+from pybliometrics.scopus import AbstractRetrieval, AuthorRetrieval
 from pybliometrics.scopus.utils import config
 from collections import defaultdict, namedtuple
 from typing import List, NamedTuple, Optional, Tuple, Union
@@ -20,67 +20,54 @@ class Article:
             allowed_id_types = ('doi')
             check_parameter_value(id_type, allowed_id_types, "id_type")
 
+        # 首先检查tinydb中是否有这个文章的信息，如果有就直接读取，如果没有就调用pybliometrics获取（待实现）
+        # 读取tinydb中的信息
+        # self._read_from_db(identifier, id_type)
+            
         # 利用pybliometrics获得文章的摘要信息
         ab = AbstractRetrieval(identifier)
-        self.abstract: Optional[str] = ab.abstract
-        self.affiliation: Optional[List[NamedTuple]] = ab.affiliation
-        authors: Optional[List[NamedTuple]] = ab.authors
-        # 每个Author的信息包括：affiliation_id, dptid, organization, city, postalcode, addresspart, country, collaboration, auid, orcid, indexed_name, surname, given_name
-        # 下面利用每个Author的信息创建一个Author类的实例
-        self.authors: Optional[list[Author]] = [Author(author) for author in authors]
 
-        self.aggregationType: str = ab.aggregationType
-        self.authkeywords: Optional[List[str]] = ab.authkeywords
-        self.authorgroup: Optional[List[NamedTuple]] = ab.authorgroup
-        self.citedby_count: Optional[int] = ab.citedby_count
-        self.citedby_link: str = ab.citedby_link
-        self.chemicals: Optional[List[NamedTuple]] = ab.chemicals
-        self.confcode: Optional[int] = ab.confcode
-        self.confdate: Optional[Tuple[Tuple[int, int], Tuple[int, int]]] = ab.confdate
-        self.conflocation: Optional[str] = ab.conflocation
-        self.confname: Optional[str] = ab.confname
-        self.confsponsor: Optional[Union[List[str], str]] = ab.confsponsor
-        self.contributor_group: Optional[List[NamedTuple]] = ab.contributor_group
-        self.coverDate: str = ab.coverDate
-        self.date_created: Optional[Tuple[int, int, int]] = ab.date_created
-        self.description: Optional[str] = ab.description
-        self.doi: Optional[str] = ab.doi
-        self.eid: str = ab.eid
-        self.endingPage: Optional[str] = ab.endingPage
-        self.funding: Optional[List[NamedTuple]] = ab.funding
-        self.funding_text: Optional[str] = ab.funding_text
-        self.isbn: Optional[Tuple[str, ...]] = ab.isbn
-        self.issn: Optional[NamedTuple] = ab.issn
-        self.identifier: int = ab.identifier
-        self.idxterms: Optional[List[str]] = ab.idxterms
-        self.issueIdentifier: Optional[str] = ab.issueIdentifier
-        self.issuetitle: Optional[str] = ab.issuetitle
-        self.language: Optional[str] = ab.language
-        self.openaccess: Optional[int] = ab.openaccess
-        self.openaccessFlag: Optional[bool] = ab.openaccessFlag
-        self.pageRange: Optional[str] = ab.pageRange
-        self.pii: Optional[str] = ab.pii
-        self.publicationName: Optional[str] = ab.publicationName
-        self.publisher: Optional[str] = ab.publisher
-        self.publisheraddress: Optional[str] = ab.publisheraddress
-        self.pubmed_id: Optional[int] = ab.pubmed_id
-        self.refcount: Optional[int] = ab.refcount
-        self.references: Optional[List[NamedTuple]] = ab.references
-        self.scopus_link: str = ab.scopus_link
-        self.self_link: str = ab.self_link
-        self.sequencebank: Optional[List[NamedTuple]] = ab.sequencebank
-        self.source_id: Optional[str] = ab.source_id
-        self.source_type: Optional[str] = ab.source_type
-        self.startingPage: Optional[str] = ab.startingPage
-        self.subject_areas: Optional[List[str]] = ab.subject_areas
-        self.title: str = ab.title
-        self.url: str = ab.url
-        self.volume: Optional[str] = ab.volume
-        self.website: Optional[str] = ab.website
+        self._abattrlist = ["abstract", "affiliation", "authors", "aggregationType", "authkeywords", "authorgroup",
+                            "citedby_count", "citedby_link", "chemicals", "confcode", "confdate", "conflocation",
+                            "confname", "confsponsor", "contributor_group", "coverDate", "date_created", "description",
+                            "doi", "eid", "endingPage", "funding", "funding_text", "isbn", "issn", "identifier",
+                            "idxterms", "issueIdentifier", "issuetitle", "language", "openaccess", "openaccessFlag",
+                            "pageRange", "pii", "publicationName", "publisher", "publisheraddress", "pubmed_id",
+                            "refcount", "references", "scopus_link", "self_link", "sequencebank", "source_id",
+                            "source_type", "startingPage", "subject_areas", "title", "url", "volume", "website"]
 
+        # 将ab中的所有属性字段赋给self
+        for attr in self._abattrlist:
+            if hasattr(ab, attr):
+                # 如果ab中有这个属性，就赋值给self
+                setattr(self, attr, ab.__getattribute__(attr))
+            else:
+                # 如果ab中没有这个属性，就赋值为None
+                setattr(self, attr, None)
+        
 class Author:
-    def __init__(self) -> None:
-        pass
+    def __init__(self,author_id: Union[int, str]) -> None:
+        """
+        class that stores the author information
+        :param author_id: The ID or the EID of the author.
+        """
+
+        au = AuthorRetrieval(author_id)
+        self._authorattrlist = ["affiliation_current", "affiliation_history", "alias", "citation_count", "cited_by_count",
+                                "classificationgroup", "coauthor_count", "coauthor_link", "date_created", "document_count",
+                                "eid", "given_name", "h_index", "historical_identifier", "identifier", "indexed_name",
+                                "initials", "name_variants", "orcid", "publication_range", "scopus_author_link",
+                                "search_link", "self_link", "status", "subject_areas", "surname", "url"]
+        # 将au中的所有属性字段赋给self
+        for attr in self._authorattrlist:
+            if hasattr(au, attr):
+                # 如果au中有这个属性，就赋值给self
+                setattr(self, attr, au.__getattribute__(attr))
+            else:
+                # 如果au中没有这个属性，就赋值为None
+                setattr(self, attr, None)
+
+
 
 def check_parameter_value(parameter, allowed, name):
     """Raise a ValueError if a parameter value is not in the set of
@@ -130,7 +117,10 @@ def detect_id_type(sid):
 ab = AbstractRetrieval("10.1016/j.softx.2019.100263")
 
 a = Article("10.1016/j.softx.2019.100263")
-print(a)
+author_id1 = a.authors[0].auid
+print(author_id1)
+
+au1 = Author(author_id1)
 
 
 print(config['Authentication']['APIKey'])  # Show keys
