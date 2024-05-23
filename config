@@ -1,0 +1,2 @@
+# Description: add your maptier api key here and rename this file to config.py
+MAPTIER_API_KEY = 'your api key here'
