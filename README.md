@@ -1,2 +1,0 @@
-# BibAnalysis
-bibliography analysis code
