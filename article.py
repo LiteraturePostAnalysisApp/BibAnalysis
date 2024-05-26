@@ -1,129 +1,165 @@
-from pybliometrics.scopus import AbstractRetrieval, AuthorRetrieval
+from pybliometrics.scopus import AbstractRetrieval, AuthorRetrieval, AffiliationRetrieval
 from pybliometrics.scopus.utils import config
 from collections import defaultdict, namedtuple
-from typing import List, NamedTuple, Optional, Tuple, Union
+from typing import Union
 
-class Article:
-    def __init__(self, identifier: str, id_type: str = None):
-        """
-        :param identifier: The identifier of a document. Can be the Scopus EID,
-                           the Scopus ID, the PII, the Pubmed-ID, or the DOI.
+class Article(AbstractRetrieval):
+    def __init__(self,
+                 identifier: Union[int, str] = None,
+                 refresh: Union[bool, int] = False,
+                 view: str = 'META_ABS',
+                 id_type: str = None,
+                 **kwds: str
+                 ) -> None:
+        """Interaction with the Abstract Retrieval API.
+
+        :param identifier: The identifier of a document.  Can be the Scopus EID
+                           , the Scopus ID, the PII, the Pubmed-ID or the DOI.
+        :param refresh: Whether to refresh the cached file if it exists or not.
+                        If int is passed, cached file will be refreshed if the
+                        number of days since last modification exceeds that value.
         :param id_type: The type of used ID. Allowed values: None, 'eid', 'pii',
-                        'scopus_id', 'pubmed_id', 'doi'. If the value is None,
+                        'scopus_id', 'pubmed_id', 'doi'.  If the value is None,
                         the function tries to infer the ID type itself.
+        :param view: The view of the file that should be downloaded.  Allowed
+                     values: META, META_ABS, REF, FULL, where FULL includes all
+                     information of META_ABS view and META_ABS includes all
+                     information of the META view.  For details see
+                     https://dev.elsevier.com/sc_abstract_retrieval_views.html.
+        :param kwds: Keywords passed on as query parameters.  Must contain
+                     fields and values listed in the API specification at
+                     https://dev.elsevier.com/documentation/AbstractRetrievalAPI.wadl.
+
+        Raises
+        ------
+        ValueError
+            If any of the parameters `id_type`, `refresh` or `view` is not
+            one of the allowed values.
+
+        Notes
+        -----
+        The directory for cached results is `{path}/{view}/{identifier}`,
+        where `path` is specified in your configuration file.  In case
+        `identifier` is a DOI, an underscore replaces the forward slash.
         """
-        # 区分不同的ID类型，期望支持的ID类型有：eid, pii, scopus_id, pubmed_id, doi，目前只支持doi
-        if id_type is None:
-            id_type = detect_id_type(identifier)
-        else:
-            # allowed_id_types = ('eid', 'pii', 'scopus_id', 'pubmed_id', 'doi')
-            allowed_id_types = ('doi')
-            check_parameter_value(id_type, allowed_id_types, "id_type")
-
-        # 首先检查tinydb中是否有这个文章的信息，如果有就直接读取，如果没有就调用pybliometrics获取（待实现）
-        # 读取tinydb中的信息
-        # self._read_from_db(identifier, id_type)
-            
-        # 利用pybliometrics获得文章的摘要信息
-        ab = AbstractRetrieval(identifier)
-
-        self._abattrlist = ["abstract", "affiliation", "authors", "aggregationType", "authkeywords", "authorgroup",
-                            "citedby_count", "citedby_link", "chemicals", "confcode", "confdate", "conflocation",
-                            "confname", "confsponsor", "contributor_group", "coverDate", "date_created", "description",
-                            "doi", "eid", "endingPage", "funding", "funding_text", "isbn", "issn", "identifier",
-                            "idxterms", "issueIdentifier", "issuetitle", "language", "openaccess", "openaccessFlag",
-                            "pageRange", "pii", "publicationName", "publisher", "publisheraddress", "pubmed_id",
-                            "refcount", "references", "scopus_link", "self_link", "sequencebank", "source_id",
-                            "source_type", "startingPage", "subject_areas", "title", "url", "volume", "website"]
-
-        # 将ab中的所有属性字段赋给self
-        for attr in self._abattrlist:
-            if hasattr(ab, attr):
-                # 如果ab中有这个属性，就赋值给self
-                setattr(self, attr, ab.__getattribute__(attr))
-            else:
-                # 如果ab中没有这个属性，就赋值为None
-                setattr(self, attr, None)
+        # Initialize
+        super().__init__(identifier=identifier, refresh=refresh, view=view,
+                         id_type=id_type, api='AbstractRetrieval', **kwds)
+        self._attrlist = ['abstract', 'affiliation', 'aggregationType',
+                            'authkeywords', 'authorgroup', 'authors', 'citedby_count',
+                            'citedby_link', 'chemicals', 'confcode', 'confdate',
+                            'conflocation', 'confname', 'confsponsor',
+                            'contributor_group', 'copyright', 'copyright_type',
+                            'correspondence', 'coverDate', 'date_created', 'description',
+                            'doi', 'eid', 'endingPage', 'funding', 'funding_text',
+                            'isbn', 'issn', 'identifier', 'idxterms', 'issueIdentifier',
+                            'issuetitle', 'language', 'openaccess', 'openaccessFlag',
+                            'pageRange', 'pii', 'publicationName', 'publisher',
+                            'publisheraddress', 'pubmed_id', 'refcount', 'references',
+                            'scopus_link', 'self_link', 'sequencebank', 'source_id',
+                            'sourcetitle_abbreviation', 'srctype', 'startingPage',
+                            'subject_areas', 'subtype', 'subtypedescription', 'title',
+                            'url', 'volume', 'website']
         
-class Author:
-    def __init__(self,author_id: Union[int, str]) -> None:
+    def save_to_database(self, db: TinyDB) -> int:
+        """save the article to database in class Bibanalysis,and return the doc_id"""
+        raise NotImplementedError
+        doc_id = db.insert(self.data)
+        return doc_id
+    
+    def get_pdf_from_zotero(self, zotero_api_key, zotero_user_id, zotero_collection_id):
+        """get the pdf from zotero"""
+        raise NotImplementedError
+        return pdf_path
+    
+    def refresh(self):
+        """refresh the article"""
+        self.__init__(identifier=self.identifier, refresh=True)
+        
+class Author(AuthorRetrieval):
+    def __init__(self, author_id: Union[int, str], refresh: Union[bool, int] = False, view: str = "ENHANCED", **kwds: str):
         """
-        class that stores the author information
+        Interaction with the Author Retrieval API.
         :param author_id: The ID or the EID of the author.
+        :param refresh: Whether to refresh the cached file if it exists or not.
+                        If int is passed, cached file will be refreshed if the
+                        number of days since last modification exceeds that value.
+        :param view: The view of the file that should be downloaded. Allowed
+                     values: `METRICS`, `LIGHT`, `STANDARD`, `ENHANCED`, where `STANDARD`
+                     includes all information of `LIGHT` view and `ENHANCED`
+                     includes all information of any view. For details see
+                     https://dev.elsevier.com/sc_author_retrieval_views.html.
+                     Note: Neither the `BASIC` nor the `DOCUMENTS` view are active,
+                     although documented.
+        :param kwds: Keywords passed on as query parameters. Must contain
+                     fields and values mentioned in the API specification at
+                     https://dev.elsevier.com/documentation/AuthorRetrievalAPI.wadl.
+        Raises
+        ------
+        ValueError
+            If any of the parameters `refresh` or `view` is not
+            one of the allowed values.
+        Notes
+        -----
+        The directory for cached results is `{path}/ENHANCED/{author_id}`,
+        where `path` is specified in your configuration file, and `author_id`
+        is stripped of an eventually leading `'9-s2.0-'`.
         """
+        super().__init__(author_id, refresh, view, **kwds)
+        self._attrlist = ["affiliation_current", "affiliation_history", "alias", "citation_count", "cited_by_count",
+                            "classificationgroup", "coauthor_count", "coauthor_link", "date_created", "document_count",
+                            "eid", "given_name", "h_index", "historical_identifier", "identifier", "indexed_name",
+                            "initials", "name_variants", "orcid", "publication_range", "scopus_author_link",
+                            "search_link", "self_link", "status", "subject_areas", "surname", "url"]
 
-        au = AuthorRetrieval(author_id)
-        self._authorattrlist = ["affiliation_current", "affiliation_history", "alias", "citation_count", "cited_by_count",
-                                "classificationgroup", "coauthor_count", "coauthor_link", "date_created", "document_count",
-                                "eid", "given_name", "h_index", "historical_identifier", "identifier", "indexed_name",
-                                "initials", "name_variants", "orcid", "publication_range", "scopus_author_link",
-                                "search_link", "self_link", "status", "subject_areas", "surname", "url"]
-        # 将au中的所有属性字段赋给self
-        for attr in self._authorattrlist:
-            if hasattr(au, attr):
-                # 如果au中有这个属性，就赋值给self
-                setattr(self, attr, au.__getattribute__(attr))
-            else:
-                # 如果au中没有这个属性，就赋值为None
-                setattr(self, attr, None)
+    def refresh(self):
+        """refresh the author"""
+        self.__init__(author_id=self.author_id, refresh=True)
 
 
+class Affiliation(AffiliationRetrieval):
+    def __init__(self,aff_id: Union[int, str],refresh: Union[bool, int] = False,view: str = "STANDARD",**kwds: str) -> None:
+        """
+        Interaction with the Affiliation Retrieval API.
+        :param aff_id: Scopus ID or EID of the affiliation profile.
+        :param refresh: Whether to refresh the cached file if it exists or not.
+                        If int is passed, cached file will be refreshed if the
+                        number of days since last modification exceeds that value.
+        :param view: The view of the file that should be downloaded. Allowed
+                     values: `LIGHT`, `STANDARD`, where `STANDARD` includes all
+                     information of the `LIGHT` view. For details see
+                     https://dev.elsevier.com/sc_affil_retrieval_views.html.
+                     Note: Neither the `BASIC` view nor `DOCUMENTS` or `AUTHORS`
+                     views are active, although documented.
+        :param kwds: Keywords passed on as query parameters. Must contain
+                     fields and values mentioned in the API specification at
+                     https://dev.elsevier.com/documentation/AffiliationRetrievalAPI.wadl.
+        Raises
+        ------
+        ValueError
+            If any of the parameters `refresh` or `view` is not
+            one of the allowed values.
+        Notes
+        -----
+        The directory for cached results is `{path}/{view}/{aff_id}`,
+        where `path` is specified in your configuration file.
+        """
+        super().__init__(aff_id,refresh,view,**kwds)
+        self._attrlist = ["address", "affiliation_name", "author_count", "city", "country", "date_created",
+                            "document_count", "eid", "identifier", "name_variants", "org_domain", "org_type",
+                            "org_URL", "postal_code", "scopus_affiliation_link", "self_link", "search_link", "state",
+                            "status", "sort_name", "url"]
 
-def check_parameter_value(parameter, allowed, name):
-    """Raise a ValueError if a parameter value is not in the set of
-    allowed values.
-    """
-    if parameter not in allowed:
-        raise ValueError(f"Parameter '{name}' must be one of {', '.join(allowed)}.")
+    def refresh(self):
+        """refresh the affiliation"""
+        self.__init__(aff_id=self.aff_id, refresh=True)
         
-def detect_id_type(sid):
-    """Method that tries to infer the type of abstract ID.
+if __name__ == "__main__":
+    a = Article("10.1016/j.softx.2019.100263")
+    print(a)
+    print(a.authors)
+    author_id1 = a.authors[0].auid
+    au1 = Author(author_id1)
 
-    Parameters
-    ----------
-    sid : str
-        The ID of an abstract on Scopus.
-
-    Raises
-    ------
-    ValueError
-        If the ID type cannot be inferred.
-
-    Notes
-    -----
-    Scopus IDs and Pubmed IDs are sometimes hard to distinguish.  If you
-    work with both types, consider specifying the ID type manually.
-    """
-    sid = str(sid)
-    if not sid.isnumeric():
-        if sid.startswith('1-s2.0-') or sid.startswith('2-s2.0-'):
-            id_type = 'eid'
-        elif '/' in sid or "." in sid:
-            id_type = 'doi'
-        elif 16 <= len(sid) <= 17:
-            id_type = 'pii'
-    else:
-        if len(sid) < 10:
-            id_type = 'pubmed_id'
-        else:
-            id_type = 'scopus_id'
-    try:
-        return id_type
-    except UnboundLocalError:
-        raise ValueError(f'ID type detection failed for "{sid}".')
-
-
-
-ab = AbstractRetrieval("10.1016/j.softx.2019.100263")
-
-a = Article("10.1016/j.softx.2019.100263")
-author_id1 = a.authors[0].auid
-print(author_id1)
-
-au1 = Author(author_id1)
-
-
-print(config['Authentication']['APIKey'])  # Show keys
-config['Proxy']['https'] = 'https://127.0.0.1:7890'  # Redefine proxy
 
 
