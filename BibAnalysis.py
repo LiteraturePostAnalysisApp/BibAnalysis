@@ -2,6 +2,8 @@ from tinydb import TinyDB,Query
 from config import MAPTIER_API_KEY
 from cerberus import Validator
 # from validaterules import validate_rules
+from scopus_integration import Article, Author, Affiliation
+from openai_integration import GptChatBot
 from excel_interaction import ExcelInteraction
 import json
 import os
@@ -19,6 +21,7 @@ class BibAnalysis:
         """
         self.bib_database_path = kwargs.get('bib_database_path', './data/bib_database.json')
         self.database = TinyDB(self.bib_database_path)
+        self.chatbot = GptChatBot()
 
     def __str__(self):
         """Return the string representation of the class."""
@@ -30,3 +33,8 @@ if __name__ == '__main__':
     print(bib.bib_database_path)
     print(bib)
     print('BibAnalysis class is working fine.')
+    a = Article("10.1016/j.engstruct.2022.115574")
+    pdfpath = a.get_pdf_from_zotero()
+    bib.chatbot.add_pdf_to_chat(pdfpath)
+    bib.chatbot.get_response("please analysis article 11", jsonmode=False)
+
