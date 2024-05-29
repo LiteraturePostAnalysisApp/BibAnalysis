@@ -57,38 +57,13 @@ class ZoteroIntegration():
                 attachment_path = os.path.join(self.storage_path, item_key, filename)
                 return attachment_path
         return None
-    
-    @staticmethod
-    def get_zotero_storage_path():
-        """Get the path to the Zotero storage directory."""
-        # assume platform is'Windows':
-        zotero_config_dir = os.path.join(os.getenv('APPDATA'), 'Zotero', 'Zotero')
 
-        # Find the default profile
-        profiles_ini_path = os.path.join(zotero_config_dir, 'profiles.ini')
-        if not os.path.exists(profiles_ini_path):
-            raise FileNotFoundError("Zotero profiles.ini not found.")
 
-        with open(profiles_ini_path, 'r') as f:
-            profiles_ini = f.read()
-
-        # Parse profiles.ini to find the default profile
-        for line in profiles_ini.splitlines():
-            if line.strip().startswith('Path='):
-                profile_path = line.split('=')[1].strip()
-                break
-        else:
-            raise ValueError("Default profile path not found in profiles.ini.")
-
-        # Determine the full path to the profile directory
-        profile_dir = os.path.join(zotero_config_dir, profile_path)
-
-        # Determine the storage directory within the profile
-        storage_dir = os.path.join(profile_dir, 'storage')
-        if not os.path.exists(storage_dir):
-            raise FileNotFoundError("Zotero storage directory not found.")
-
-        return storage_dir
+    @property   
+    def storage_path(self):
+        """return the storage path of the zotero."""
+        raise NotImplementedError
+        return self.storage_path
 
 
 if __name__ == '__main__':
