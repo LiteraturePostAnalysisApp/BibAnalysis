@@ -79,7 +79,7 @@ class GptChatBot():
         )
 
 if __name__ == "__main__":
-    apikey = "sk-5Yw6uiLGjxo31WtdWJOqUwRVvLfLvOmAUpvYjhB7Q6yHGNmA"
+    apikey = "your api key here"
     chatbot = GptChatBot(baseurl = "https://api.chatanywhere.com.cn")
     # response = chatbot.get_response("What is the capital of France?", jsonmode=False)
     # print(response)
