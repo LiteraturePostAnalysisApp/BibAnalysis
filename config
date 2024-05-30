@@ -1,2 +1,83 @@
 # Description: add your maptier api key here and rename this file to config.py
 MAPTIER_API_KEY = 'your api key here'
+
+# Zotero Information
+# ID of the personal or group library you want to access, your personal library ID is available at https://www.zotero.org/settings/keys
+ZOTERO_LIBRARY_ID = 'your personal or group library id here'
+# API key : https://www.zotero.org/settings/keys/new
+ZOTERO_API_KEY = 'your api key here'
+# Type of library. 'user' for personal library, 'group' for group library
+LIVRARY_TYPE = 'user'
+
+# Assistant Prompt Example, in JSON format
+jsonexample = {
+    "Title": "",
+    "Authors": "",
+    "Keywords": "", 
+    "PublishYear": int, 
+    "Region": "(city,province,country) where author or organization is located, full spelling, ';' to split different region.",
+    "Cited": "number of Citation",
+    "Journal": "name of publication Journal", 
+    "Background": "overview of the research field from a macro perspective and clarify the research objectives.",
+    "Research subject": "Identify the specific structure or aspect of the research field that is being directly studied or analyzed.",
+    "Knowledge gap": "Describe the specific gaps or deficiencies in the current body of knowledge that this research aims to address.",
+    "Scale": {
+        "Component":"bool type，True for components of a structure such as deck/pier/pile etc.",
+        "Structure":"bool type，True for research that considers entire structure as a whole.",
+        "Regional(Network)":"bool type，True for consider multiple structures or network within a region/area."
+    },
+    "ML methods": {
+        "NOTE(DONT FILL)": "all field here are bool type and any usage of a machine learning method, whether as a primary approach or a baseline reference, qualifies as 'true'.",
+        "RSM": "Response Surface Method(RSM), NOTE that Lasso, Ridge, Elastic Net are included",
+        "ANN": "Artificial Neural Networks (ANN), including neural networks(NN), multi-layer perceptron.",
+        "DL": "Deep Learning(DL,DNN), including Convolutional Neural Networks(CNN), Recurrent Neural Networks(RNN), reinforced learning.",
+        "SVM": "Support Vector Machines (SVM), including support vector regression.",
+        "KNN": "K-Nearest Neighbors (KNN)",
+        "LR": "Logistic Regression(LR)",
+        "NB": "Naive Bayes(NB)",
+        "DT": "Decision Trees(DT)",
+        "RF": "Random Forest(RF)",
+        "GP": "Gaussian Processes(GP)",
+        "DA": "Discriminant Analysis(DA)",
+        "GM": "Gaussian Mixture Models (GMM)",
+        "Boost": "Boosting Algorithms",
+        "Hybrid": "Hybrid Models",
+        "Other": "other machine learning models not listed here. if no other specific method apply, they should also be classified under this category."
+    },
+    "Task": {
+        "NOTE(DONT FILL)": "Fields are bool type and should be assigned based on the machine learning tasks detailed within the article, not just its main topic.",
+        "Classification": "True if the article discusses methods for categorizing data into predefined classes or groups using machine learning.",
+        "Regression": "True if the article explains predicting values based on input variables through machine learning, emphasizing functional relationships.",
+        "Clustering": "True if the article covers machine learning techniques for grouping objects or data points into clusters based on similarity.",
+        "Dimensionality Reduction": "True if the article addresses machine learning strategies for reducing the number of variables to principal ones, simplifying data.",
+        "Decision-making": "True if the article involves machine learning in decision-making processes with clear decision variables."
+    },
+    "Data resource": {
+        "NOTE(DONT FILL)": "all field here are bool type",
+        "Computational or theoretical analysis": "data derived from computational models or theoretical calculations.",
+        "Field measurement":"data collected directly from real-world environments, such as bridges in actual use.",
+        "Laboratory testing": "data gathered from controlled experiments conducted in a laboratory setting."
+    },
+    "Topic": {
+        "NOTE(DONT FILL)": "all field here are bool type",
+        "Response/demand modeling": "Concentrates on how bridges respond to various hazards, measuring and analyzing the intensity and variations of these responses. True if the study involves this aspect and do not care about structural damage/failure.",
+        "Capacity modeling": "Investigates the strength or capacity against multiple hazards or classifying failure modes based on experiments. True if the study involves this aspect.",
+        "Damage modeling": "Focuses on assessing damage, analyzing structural damages or failure modes that may occur, including failure mode classification, and vulnerability/fragility (curve) analysis. True if the study involves this aspect.",
+        "Risk assessment": "Evaluating the likelihood and consequences of damage to bridge structures due to multiple hazards. Involves probabilistic approaches for risk quantification. True if the study involves this aspect.",
+        "Resilience analysis": "Focuses on the ability of bridge structures to withstand, adapt to, and recover from various hazards. It includes the study of materials, design strategies, and engineering techniques that enhance the multi-hazard resilience of bridges. True if the study involves this aspect.",
+    },
+    "Event": {
+        "NOTE":"all field here are bool type and should be classified under 'Normal operation or event-independent' unless other specific events listed below apply.",
+        "Normal operation or event-independent": "Covers conditions where the bridge is under regular operation without specific hazard impacts. This includes everyday stresses such as fatigue and typical environmental conditions. ",
+        "Earthquake": "seismic activities, focusing on bridge response, damage, and resilience to earthquake-induced forces.",
+        "Landslide and debris flow": "",
+        "Flood and scour": "flooding and scouring on bridge foundations and structures",
+        "Extreme wind": "such as hurricanes and tornadoes",
+        "Storm Surge or wave loads": "including the effects of increased water levels and wave forces.",
+        "Fire or Wildfire": "",
+        "Collision": "impact of collisions, from barges, vehicles, or other objects.",
+        "Multi-hazard or not": "True if the research focuses on the interaction of multiple hazards simultaneously."
+    },
+    "Conclusions":"",
+    "Innovations":"" 
+}
