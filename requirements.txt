@@ -1,0 +1,6 @@
+tinydb
+cerberus
+rich
+pyzotero
+openai
+pybliometrics
