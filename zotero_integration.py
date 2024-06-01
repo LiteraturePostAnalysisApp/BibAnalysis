@@ -3,11 +3,12 @@ from pyzotero import zotero
 from scopus_integration import Article
 import os
 from functools import lru_cache
+from loguru import logger
 
 class ZoteroIntegration():
     def __init__(self, zotero_api_key:str=ZOTERO_API_KEY, zotero_library_id:str=ZOTERO_LIBRARY_ID, library_type:str=LIVRARY_TYPE):
         self.zot = zotero.Zotero(zotero_library_id, library_type, zotero_api_key)
-        self.storage_path = "\Zotero\storage"
+        self.storage_path = "./Zotero\storage"
 
     # 还没写，获取zotero在电脑上的存储路径，比如F:\Zotero\storage，则返回F:，函数完成后应修改__init__函数和单元测试代码 
     # @property
@@ -63,7 +64,7 @@ class ZoteroIntegration():
     @lru_cache
     def get_file_path(self, itemkey:str):
         """get the file path of the item."""
-        items = self.zot.children(item_key)
+        items = self.zot.children(itemkey)
         for item in items:
             if item['data']['contentType'] == 'application/pdf':
                 key = item['key']

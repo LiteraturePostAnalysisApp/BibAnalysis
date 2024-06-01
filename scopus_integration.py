@@ -1,8 +1,9 @@
 from pybliometrics.scopus import AbstractRetrieval, AuthorRetrieval, AffiliationRetrieval
-from pybliometrics.scopus.utils import config
+from pybliometrics.scopus.utils import config as pybliometrics_config
 from collections import defaultdict, namedtuple
 from typing import Union
 import pyzotero
+from loguru import logger
 
 class Article(AbstractRetrieval):
     def __init__(self,
@@ -44,8 +45,12 @@ class Article(AbstractRetrieval):
         `identifier` is a DOI, an underscore replaces the forward slash.
         """
         # Initialize
-        super().__init__(identifier=identifier, refresh=refresh, view=view,
-                         id_type=id_type, **kwds)
+        try:
+            super().__init__(identifier=identifier, refresh=refresh, view=view,
+                             id_type=id_type, **kwds)
+            logger.info(f"Article Info of DOI:{identifier} Get!")
+        except Exception as e:
+            logger.error(f"Fail to get Article Info of DOI:{identifier}! \n Mainly because of VPN Usage or Network Error, Detail:\n{e}")
         # Define attributes
         self._attrlist = ['abstract', 'affiliation', 'aggregationType',
                             'authkeywords', 'authorgroup', 'authors', 'citedby_count',
@@ -62,11 +67,14 @@ class Article(AbstractRetrieval):
                             'sourcetitle_abbreviation', 'srctype', 'startingPage',
                             'subject_areas', 'subtype', 'subtypedescription', 'title',
                             'url', 'volume', 'website']
+
+
         
     def save_to_database(self, db) -> int:
         """save the article to database in class Bibanalysis,and return the doc_id"""
         raise NotImplementedError
         doc_id = db.insert(self.data)
+        logger.info(f"Article Info of DOI:{self.identifier} Save to Database with doc_id:{doc_id}")
         return doc_id
     
     def get_pdf_from_zotero(self, zotero_api_key, zotero_user_id, zotero_collection_id):
@@ -79,16 +87,23 @@ class Article(AbstractRetrieval):
         raise NotImplementedError
         if self.get_pdf_from_scihub():
             zotero_item_key = zotero.add_item(self.data)
+        logger.info(f"Article Info of DOI:{self.identifier} Add to Zotero with item_key:{zotero_item_key}")
         return zotero_item_key
     
     def get_pdf_from_scihub(self):
         """get the pdf from scihub"""
         raise NotImplementedError
+        try:
+            pdf_path = self.download_pdf()
+            logger.info(f"Article Info of DOI:{self.identifier} Get PDF from Scihub with path:{pdf_path}")
+        except Exception as e:
+            logger.warning(f"Fail to get PDF from Scihub for Article Info of DOI:{self.identifier}! \n Mainly because of VPN Usage or Network Error:{e}")
         return pdf_path 
 
     def refresh(self):
         """refresh the article"""
         self.__init__(identifier=self.identifier, refresh=True)
+        logger.info(f"Article Info of DOI:{self.identifier} Refreshed!")
         
 class Author(AuthorRetrieval):
     def __init__(self, author_id: Union[int, str], refresh: Union[bool, int] = False, view: str = "ENHANCED", **kwds: str):
@@ -119,7 +134,11 @@ class Author(AuthorRetrieval):
         where `path` is specified in your configuration file, and `author_id`
         is stripped of an eventually leading `'9-s2.0-'`.
         """
-        super().__init__(author_id, refresh, view, **kwds)
+        try:
+            super().__init__(author_id, refresh, view, **kwds)
+            logger.info(f"Author Info of author_id:{author_id} Get!")
+        except Exception as e:
+            logger.error(f"Fail to get Article Info of DOI:{author_id}! \n Mainly because of VPN Usage or Network Error, Detail:\n{e}")
         self._attrlist = ["affiliation_current", "affiliation_history", "alias", "citation_count", "cited_by_count",
                             "classificationgroup", "coauthor_count", "coauthor_link", "date_created", "document_count",
                             "eid", "given_name", "h_index", "historical_identifier", "identifier", "indexed_name",
@@ -129,6 +148,7 @@ class Author(AuthorRetrieval):
     def refresh(self):
         """refresh the author"""
         self.__init__(author_id=self.author_id, refresh=True)
+        logger.info(f"Author Info of author_id:{self.author_id} Refreshed!")
 
 
 class Affiliation(AffiliationRetrieval):
@@ -158,7 +178,11 @@ class Affiliation(AffiliationRetrieval):
         The directory for cached results is `{path}/{view}/{aff_id}`,
         where `path` is specified in your configuration file.
         """
-        super().__init__(aff_id,refresh,view,**kwds)
+        try:
+            super().__init__(aff_id,refresh,view,**kwds)
+            logger.info(f"Affiliation Info of aff_id:{aff_id} Get!")
+        except Exception as e:
+            logger.error(f"Fail to get Article Info of DOI:{aff_id}! \n Mainly because of VPN Usage or Network Error, Detail:\n{e}")
         self._attrlist = ["address", "affiliation_name", "author_count", "city", "country", "date_created",
                             "document_count", "eid", "identifier", "name_variants", "org_domain", "org_type",
                             "org_URL", "postal_code", "scopus_affiliation_link", "self_link", "search_link", "state",
@@ -167,6 +191,7 @@ class Affiliation(AffiliationRetrieval):
     def refresh(self):
         """refresh the affiliation"""
         self.__init__(aff_id=self.aff_id, refresh=True)
+        logger.info(f"Affiliation Info of aff_id:{self.aff_id} Refreshed!")
 
 if __name__ == "__main__":
     a = Article("10.1016/j.softx.2019.100263")

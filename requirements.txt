@@ -4,3 +4,4 @@ rich
 pyzotero
 openai
 pybliometrics
+loguru
