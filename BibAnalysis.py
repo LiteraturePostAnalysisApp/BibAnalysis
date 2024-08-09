@@ -12,7 +12,8 @@ import requests
 import re
 from rich import print
 from loguru import logger
-
+import logging
+from scopus_integration import Article, ScopusException
 class BibAnalysis:
     def __init__(self, *args, **kwargs):
         """
@@ -50,14 +51,27 @@ class BibAnalysis:
         """Return the string representation of the class."""
         return f'bib class at path:{self.bib_database_path}\\n have {len(self.database)} articles in database.'
     
+    def retrieve_article_info(self, doi):
+        try:
+            article = Article(doi)
+            logger.info(f"Successfully retrieved article information for DOI: {doi}")
+            return article
+        except ScopusException as e:
+            logger.error(f"Failed to retrieve article info for DOI: {doi}. Error: {str(e)}")
+            if "not authorized" in str(e):
+                logger.error("Authorization issue detected. Please check your API key and permissions.")
+            elif "VPN" in str(e):
+                logger.error("VPN usage may be causing the issue. Try disabling the VPN.")
+            else:
+                logger.error("Unknown error occurred.")
+            return None
 
 if __name__ == '__main__':
     bib = BibAnalysis()
-    a = Article("10.1016/j.engstruct.2022.115574")
+    a = Article("10.1061/PPSCFX.SCENG-1523")
     # 待完善
-    # pdfpath = a.get_pdf_from_zotero()
-    # 待完善后删掉'F:'
-    pdfpath = 'F:'+bib.zotero.get_pdf_path_from_collection_name('mergedris20240208', '10.1016/j.engstruct.2022.115574')
+    pdfpath = bib.zotero.get_pdf_path_from_collection_name('符合', '10.1061/PPSCFX.SCENG-1523')
     bib.chatbot.add_pdf_to_chat(pdfpath)
     bib.chatbot.get_response("please analysis article 11", jsonmode=False)
+    
 

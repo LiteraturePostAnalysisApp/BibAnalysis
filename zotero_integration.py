@@ -8,7 +8,7 @@ from loguru import logger
 class ZoteroIntegration():
     def __init__(self, zotero_api_key:str=ZOTERO_API_KEY, zotero_library_id:str=ZOTERO_LIBRARY_ID, library_type:str=LIVRARY_TYPE):
         self.zot = zotero.Zotero(zotero_library_id, library_type, zotero_api_key)
-        self.storage_path = "./Zotero\storage"
+        self.storage_path =r"C:\Users\22525\Zotero\storage"#这里是zotero在电脑上的存储路径
 
     # 还没写，获取zotero在电脑上的存储路径，比如F:\Zotero\storage，则返回F:，函数完成后应修改__init__函数和单元测试代码 
     # @property
@@ -46,15 +46,16 @@ class ZoteroIntegration():
         raise ValueError(f"The collection:{collname} is not in the library.")
 
     @lru_cache(maxsize=1000)        
-    def find_item_in_collection(self, collkey:str,article_doi:str):
-        """find the item in the collection by key and return the key of the item."""
+    def find_item_in_collection(self, collkey: str, article_doi: str):
         items = self.get_collection_items(collkey)
         for item in items:
-            print(item['data']['DOI'])
-            if item['data']['DOI'] == article_doi:
-                itemkey = item['key']
-                return itemkey
-        raise ValueError(f"The item with doi:{article_doi} is not in the collection.")
+            doi = item['data'].get('DOI', None)
+            if doi:
+                if doi == article_doi:
+                    itemkey = item['key']
+                    print(doi)
+                    return itemkey
+        raise ValueError(f"The item with DOI:{article_doi} is not in the collection.")
 
     @lru_cache(maxsize=1000)       
     def get_collection_items(self, collkey:str):
@@ -85,13 +86,13 @@ if __name__ == '__main__':
     colls = zot.collections # 所有集合名称
     print(colls)
     # 查找待分析的集合
-    collkey = zot.findcollection('mergedris20240208')
+    collkey = zot.findcollection('符合')#这是在Zetero中的文件夹的名称
     print(f"collkey:{collkey}")
     # 可以获得集合中的所有文献
     # pyz = zot.collection_items(collkey)
 
     # 在集合中查找某篇文献
-    doi = "10.1016/j.engstruct.2022.115574"
+    doi = "10.1061/PPSCFX.SCENG-1523"
     item_key = zot.find_item_in_collection(collkey,doi)
     print(f"item_key:{item_key}")
 
@@ -100,6 +101,6 @@ if __name__ == '__main__':
     print(f"filepath:{filepath}")
     
     # 读取附件
-    with open('F:'+ filepath, 'rb') as f:
+    with open(filepath, 'rb') as f:
         print(f.read(100))
 

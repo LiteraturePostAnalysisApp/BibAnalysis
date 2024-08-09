@@ -201,6 +201,3 @@ if __name__ == "__main__":
     author_id1 = a.authors[0].auid
     au1 = Author(author_id1)
     print(au1)
-
-
-
