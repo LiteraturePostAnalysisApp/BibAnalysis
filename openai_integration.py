@@ -137,9 +137,17 @@ class GptChatBot:
         return summary
 
 if __name__ == "__main__":
+<<<<<<< Updated upstream
     apikey = "sk-WQdW2yrWgKIMTKV6LOYvxFUVlVNX9Gs6nQv5htHzFQmKsyYh"
     chatbot = GptChatBot(apikey=apikey, baseurl="https://api.deepbricks.ai/v1/")
     chatbot.create_assistant("Summary Assistant", "Please help me to summarize the article.", tools=[{"type": "file_search"}])
+=======
+    apikey = "sk-BC0VyFdfoBAAkT6QmaLo0ysQEUA8B1BTMr9A7pDalaTv19mm"
+    chatbot = GptChatBot(baseurl = "https://api.chatanywhere.com.cn")
+    # response = chatbot.get_response("What is the capital of France?", jsonmode=False)
+    # print(response)
+    chatbot.create_assistant("Summary Assistant", "Please help me to summarize the article.", tools = ["file_search"])
+>>>>>>> Stashed changes
     vec_id = chatbot.create_vector_store("reference articles")
     #pdf_id = chatbot.add_pdf_to_vector_store(vec_id, [os.path.normpath(pdfpath)])
     #print(pdf_id)
