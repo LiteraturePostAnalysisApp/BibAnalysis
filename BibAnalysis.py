@@ -13,7 +13,7 @@ import re
 from rich import print
 from loguru import logger
 import logging
-from scopus_integration import Article, ScopusException
+from scopus_integration import Article#, ScopusException
 class BibAnalysis:
     def __init__(self, *args, **kwargs):
         """
