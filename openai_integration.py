@@ -1,18 +1,20 @@
 import openai
 import os
 from rich import print
-from config import jsonexample
+from config import jsonexample  # 导入jsonexample模板
 from loguru import logger
-import PyPDF2
+import pdfplumber
 from transformers import AutoTokenizer, AutoModel
 import torch
+from pinecone import Pinecone, ServerlessSpec
+import json
+
 class GptChatBot:
-    def __init__(self, apikey: str = None, baseurl: str = "https://api.openai.com", model: str = "gpt-4o-mini"):
+    def __init__(self, apikey: str = None, baseurl: str = "https://api.openai.com", model: str = "gpt-4o-mini", pinecone_key: str = None, pinecone_env: str = "us-west1-gcp"):
         self.api_key = apikey or os.getenv("OPENAI_API_KEY")
         if not self.api_key:
             raise ValueError("API key not found. Please set the OPENAI_API_KEY environment variable.")
         
-        # Set the base URL and API key for the OpenAI API
         openai.api_key = self.api_key
         openai.api_base = baseurl
         
@@ -22,25 +24,25 @@ class GptChatBot:
         self._chathistory = [{"role": "user", "content": self.assistant_prompt}]
         self.assistant = None
         self.vector_store_ids = []
+        
+        if pinecone_key:
+            self.pinecone = Pinecone(api_key=pinecone_key)
+            self.index = None
+            logger.info("Pinecone initialized.")
+        else:
+            logger.warning("Pinecone API key not provided. Vector storage won't be available.")
 
     def create_assistant(self, assistant_name: str = "Journal Analyst Assistant", instructions: str = None, tools: list = [{"type": "file_search"}]):
-        # Assuming you want to set up an assistant for some purpose, this is not directly supported by OpenAI's API, 
-        # but I'll leave the method as it might relate to some custom functionality.
         logger.info(f"Assistant created with name: {assistant_name}")
         self.assistant = {"name": assistant_name, "instructions": instructions if instructions else self.assistant_prompt, "tools": tools}
 
     @property
     def assistant_prompt(self):
-        jsontemplate = self.jsontemplate
-        return f"In order to gather structured information, I would like you, as a bridge seismic and machine learning expert, to help me with the analysis and summarization of the uploaded literature. I will tip you 10000$ for a perfect answer. Please be sure to read each article entirely. If there are no information for this field, please fill in 'Oops!' and remind user. Summarize the information and directly output it in code interpreter by importing json and combining results as a JSON file for me to download without providing any explanations (only include the value, excluding description). The filename should always be 'Article_Summary_n.json'. Example: {jsontemplate}"
+        return f"In order to gather structured information, I would like you, as a multi-hazard bridge engineering expert, particularly in the combination of earthquakes with other hazards, to help me with the analysis and summarization of the uploaded literature. Please summarize the information first in natural language."
 
-    def get_response(self, message: str, jsonmode: bool = False):
-        """Get the response from the chatbot."""
-        if jsonmode:
-            logger.info("Response in JSON mode.")
-            raise NotImplementedError
-        else:
-            logger.info("Response in Text mode.")
+    def get_response(self, message: str):
+        """Get response from the GPT model."""
+        logger.info(f"Requesting response for: {message[:50]}...")
         
         new_message = {"role": "user", "content": message}
         self._chathistory.append(new_message)
@@ -49,6 +51,7 @@ class GptChatBot:
             messages=self._chathistory,
             stream=True,
         )
+        
         response_text = ""
         for token in response:
             content = token['choices'][0]['delta'].get('content', '')
@@ -57,101 +60,142 @@ class GptChatBot:
         self._chathistory.append({"role": "assistant", "content": response_text})
         return response_text
 
-    def add_pdf_to_vector_store(self, vector_store_id: int, file_paths: list[str]):
-        """Add the pdf to the vector store."""
-        file_streams = [open(path, "rb") for path in file_paths]
-        # This is not supported in the OpenAI Python client, you might have custom logic here
-        logger.debug(f"Mock: Added PDFs to vector store with ID: {vector_store_id}")
-        return {"status": "mocked", "file_counts": len(file_paths)}
-    
-    def create_vector_store(self, vector_store_name: str):
-        """Create the vector store."""
-        # This is not supported in the OpenAI Python client, you might have custom logic here
-        logger.info(f"Mock: Created vector store with name: {vector_store_name}")
-        return 12345  # Mock ID
-
-    def update_assistant(self):
-        """Update the assistant."""
-        # This would update your assistant with any new information
-        logger.info(f"Mock: Updated assistant with ID: {self.assistant.get('id', 'unknown')} and vector stores: {self.vector_store_ids}")
-
-    def extract_text_from_pdf(self, pdf_path: str) -> str:
-        """
-        从 PDF 文件中提取文本内容。
-        Args:
-            pdf_path (str): PDF 文件路径。
-        Returns:
-            str: 提取的文本内容。
-        """
+    def extract_text_from_pdf_with_plumber(self, pdf_path: str) -> str:
+        """Extract text from the PDF file using pdfplumber."""
         text = ""
-        with open(pdf_path, 'rb') as file:
-            reader = PyPDF2.PdfReader(file)
-            for page in reader.pages:
-                text += page.extract_text()
+        with pdfplumber.open(pdf_path) as pdf:
+            for page in pdf.pages:
+                text += page.extract_text() or ""
         return text
 
-    def vectorize_text(self, text: str) -> torch.Tensor:
+    def split_text_into_chunks(self, text: str, max_tokens: int = 10000):
         """
-        将文本内容向量化。
+        将文本拆分成多个较小的部分，每部分的长度不超过指定的最大tokens数量。
+        
         Args:
-            text (str): 要向量化的文本。
+            text (str): 要拆分的文本。
+            max_tokens (int): 每个部分的最大tokens数量。
+        
         Returns:
-            torch.Tensor: 向量化的文本表示。
+            list[str]: 拆分后的文本部分列表。
         """
-        tokenizer = AutoTokenizer.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
-        model = AutoModel.from_pretrained("sentence-transformers/all-MiniLM-L6-v2")
-        
-        inputs = tokenizer(text, return_tensors="pt", truncation=True, padding=True)
-        with torch.no_grad():
-            embeddings = model(**inputs).last_hidden_state[:, 0, :]
-        return embeddings
+        words = text.split()
+        chunks = []
+        current_chunk = []
 
-    def store_vector(self, vector: torch.Tensor, metadata: dict):
-        """
-        存储向量及其元数据到 Pinecone。
-        Args:
-            vector (torch.Tensor): 要存储的向量。
-            metadata (dict): 与向量关联的元数据。
-        """
-        vector_id = metadata['doi']  # 使用 DOI 作为向量 ID
-        self.index.upsert([(vector_id, vector.tolist(), metadata)])
+        for word in words:
+            current_chunk.append(word)
+            if len(" ".join(current_chunk)) > max_tokens:
+                chunks.append(" ".join(current_chunk))
+                current_chunk = []
 
-    def add_pdf_to_chat(self, pdf_path: str):
+        if current_chunk:
+            chunks.append(" ".join(current_chunk))
+
+        return chunks
+
+    def convert_summary_to_json(self, summary_text: str):
         """
-        Extract text from the PDF, summarize it, and send it to the chat.
+        Convert the summary text into a structured JSON file based on the provided jsonexample template.
+        This function will break down the summary into different sections of the JSON template.
         
         Args:
-            pdf_path (str): Path to the PDF file.
+            summary_text (str): The text summary to be converted.
+        
+        Returns:
+            str: The filename of the saved JSON file.
         """
-        # Step 1: Extract text from the PDF
-        text = self.extract_text_from_pdf(pdf_path)
-        
-        # Step 2: Send the text to the GPT model for summarization
-        summary_prompt = f"Please summarize the following text extracted from a PDF:\n\n{text[:1500]}\n\n... [truncated]"
-        summary = self.get_response(summary_prompt)
-        
-        # Step 3: Store the summary in the chat history
-        self._chathistory.append({"role": "assistant", "content": summary})
-        
-        logger.info(f"Summary of the PDF has been added to the chat history.")
-        return summary
+        # 使用jsonexample作为模板，并根据summary_text内容填充数据
+        json_output = self.jsontemplate.copy()
 
+        # 将文本分块处理
+        chunks = self.split_text_into_chunks(summary_text, max_tokens=10000)
+        
+        # 初始化临时数据结构
+        temp_data = {
+            "titles": [],
+            "keywords": [],
+            "authors": [],
+            "dois": [],
+            "hazard_types": {hazard: 0 for hazard in json_output["Research Subject"]["Hazard Type"]},
+            "bridge_types": {bridge_type: 0 for bridge_type in json_output["Research Subject"]["Bridge Type"]},
+            "time_scales": {time_scale: 0 for time_scale in json_output["Spatiotemporal Characteristics"]["Time Scale"]},
+            "spatial_scales": {spatial_scale: 0 for spatial_scale in json_output["Spatiotemporal Characteristics"]["Spatial scale"]},
+            "site_conditions": {site_condition: 0 for site_condition in json_output["Spatiotemporal Characteristics"]["Site Condition"]}
+        }
+
+        # 遍历每个文本块并提取信息
+        for chunk in chunks:
+            # 提取基本信息并存储
+            temp_data["titles"].append(self.get_response("Extract the title from the following text: " + chunk))
+            temp_data["keywords"].extend(self.get_response("Extract the keywords from the following text: " + chunk).split(","))
+            temp_data["authors"].extend(self.get_response("Extract the authors from the following text: " + chunk).split(","))
+            temp_data["dois"].append(self.get_response("Extract the DOI from the following text: " + chunk))
+            
+            # 提取研究主题信息并累加
+            research_subject_prompt = "Based on the following text, fill in the research subject section: " + chunk
+            for hazard in temp_data["hazard_types"]:
+                if "Yes" in self.get_response(research_subject_prompt + f" Does it mention {hazard}?"):
+                    temp_data["hazard_types"][hazard] += 1
+            for bridge_type in temp_data["bridge_types"]:
+                if "Yes" in self.get_response(research_subject_prompt + f" Does it mention {bridge_type}?"):
+                    temp_data["bridge_types"][bridge_type] += 1
+            
+            # 提取时空特征信息并累加
+            spatiotemporal_prompt = "Based on the following text, fill in the spatiotemporal characteristics section: " + chunk
+            for time_scale in temp_data["time_scales"]:
+                if "Yes" in self.get_response(spatiotemporal_prompt + f" Does it mention {time_scale}?"):
+                    temp_data["time_scales"][time_scale] += 1
+            for spatial_scale in temp_data["spatial_scales"]:
+                if "Yes" in self.get_response(spatiotemporal_prompt + f" Does it mention {spatial_scale}?"):
+                    temp_data["spatial_scales"][spatial_scale] += 1
+            for site_condition in temp_data["site_conditions"]:
+                if "Yes" in self.get_response(spatiotemporal_prompt + f" Does it mention {site_condition}?"):
+                    temp_data["site_conditions"][site_condition] += 1
+
+        # Step 1: 整合并提炼基本信息
+        json_output["Basic Information"]["Title"] = self.get_response("Consolidate and summarize the following titles: " + "; ".join(temp_data["titles"]))
+        json_output["Basic Information"]["Keywords"] = list(set(temp_data["keywords"]))  # 去重
+        json_output["Basic Information"]["Authors"] = list(set(temp_data["authors"]))  # 去重
+        json_output["Basic Information"]["DOI"] = "; ".join(set(temp_data["dois"]))  # 去重并合并
+
+        # Step 2: 整合并提炼研究主题
+        for hazard, count in temp_data["hazard_types"].items():
+            json_output["Research Subject"]["Hazard Type"][hazard] = count > 0
+        for bridge_type, count in temp_data["bridge_types"].items():
+            json_output["Research Subject"]["Bridge Type"][bridge_type] = count > 0
+
+        # Step 3: 整合并提炼时空特征
+        for time_scale, count in temp_data["time_scales"].items():
+            json_output["Spatiotemporal Characteristics"]["Time Scale"][time_scale] = count > 0
+        for spatial_scale, count in temp_data["spatial_scales"].items():
+            json_output["Spatiotemporal Characteristics"]["Spatial scale"][spatial_scale] = count > 0
+        for site_condition, count in temp_data["site_conditions"].items():
+            json_output["Spatiotemporal Characteristics"]["Site Condition"][site_condition] = count > 0
+
+        # 继续填充其他部分，按照类似的逻辑
+
+        # 保存 JSON 文件
+        json_filename = "Article_Summary_n.json"
+        with open(json_filename, 'w') as json_file:
+            json.dump(json_output, json_file, indent=4)
+        logger.info(f"Summary has been converted to JSON and saved as {json_filename}")
+        return json_filename
+
+# 程序入口
 if __name__ == "__main__":
-<<<<<<< Updated upstream
-    apikey = "sk-WQdW2yrWgKIMTKV6LOYvxFUVlVNX9Gs6nQv5htHzFQmKsyYh"
-    chatbot = GptChatBot(apikey=apikey, baseurl="https://api.deepbricks.ai/v1/")
+    apikey = os.getenv("OPENAI_API_KEY")
+    pinecone_key = os.getenv("PINECONE_API_KEY")
+    
+    chatbot = GptChatBot(apikey=apikey, baseurl="https://api.deepbricks.ai/v1/", pinecone_key="8b5c4740-7ac6-40f3-9a6c-17e1beca3083")
+    
     chatbot.create_assistant("Summary Assistant", "Please help me to summarize the article.", tools=[{"type": "file_search"}])
-=======
-    apikey = "sk-BC0VyFdfoBAAkT6QmaLo0ysQEUA8B1BTMr9A7pDalaTv19mm"
-    chatbot = GptChatBot(baseurl = "https://api.chatanywhere.com.cn")
-    # response = chatbot.get_response("What is the capital of France?", jsonmode=False)
-    # print(response)
-    chatbot.create_assistant("Summary Assistant", "Please help me to summarize the article.", tools = ["file_search"])
->>>>>>> Stashed changes
-    vec_id = chatbot.create_vector_store("reference articles")
-    #pdf_id = chatbot.add_pdf_to_vector_store(vec_id, [os.path.normpath(pdfpath)])
-    #print(pdf_id)
+    
     pdfpath = r"C:\Users\22525\Zotero\storage\HXQKFPME\Ali 等 - 2024 - A Simplified Approach for Dynamic Analysis of Susp.pdf"
-    summary = chatbot.add_pdf_to_chat(pdfpath)
-    print(summary)
+    
+    summary = chatbot.extract_text_from_pdf_with_plumber(pdfpath)
+    
+    json_filename = chatbot.convert_summary_to_json(summary)
+    print(f"Summary saved to {json_filename}")
+    
     chatbot.update_assistant()
