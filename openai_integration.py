@@ -61,7 +61,7 @@ class GptChatBot:
         return response_text
 
     def extract_text_from_pdf_with_plumber(self, pdf_path: str) -> str:
-        """Extract text from the PDF file using pdfplumber."""
+        """Extract text from the PDF file using D."""
         text = ""
         with pdfplumber.open(pdf_path) as pdf:
             for page in pdf.pages:

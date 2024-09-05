@@ -1,0 +1,155 @@
+{
+    "basic_info": {
+        "title": "Multihazard Earthquake and Tsunami Effects on Soil – Foundation – Bridge Systems",
+        "keywords": [
+            "Earthquake",
+            "Soil – structure interaction",
+            "Tsunami",
+            "Bridges",
+            "OpenSees",
+            "Finite element",
+            "Multihazard"
+        ],
+        "authors": [
+            {
+                "name": "Trevor J. Carey",
+                "affiliation": null,
+                "email": null
+            },
+            {
+                "name": "H. Benjamin Mason",
+                "affiliation": null,
+                "email": null
+            },
+            {
+                "name": "Andre R. Barbosa",
+                "affiliation": null,
+                "email": null
+            },
+            {
+                "name": "Michael H. Scott",
+                "affiliation": null,
+                "email": null
+            }
+        ],
+        "doi": "10.1061/(ASCE)BE.1943-5592.0001353"
+    },
+    "research_subject": {
+        "hazard": {
+            "earthquake": true,
+            "strong_wind": null,
+            "scour": null,
+            "soil_liquefication": null,
+            "tsunami": true,
+            "landslide": null,
+            "corrosion": null,
+            "storm_surge": null,
+            "flooding": null,
+            "ground_moving": null,
+            "fire": null,
+            "explosion": null,
+            "climate_change": null
+        },
+        "bridge": {
+            "beam_bridge": true,
+            "arch_bridge": false,
+            "cable_stayed_bridge": false,
+            "suspension_bridge": false
+        }
+    },
+    "spatialtemporal_characteristics": {
+        "time_scale": {
+            "single_disaster_combination": true,
+            "multiple_disaster_chain": false,
+            "life_cycle": false
+        },
+        "spatial_scale": {
+            "component": false,
+            "structure_without_site": false,
+            "structure_with_site": true,
+            "region_or_network": false
+        },
+        "site_condition": null
+    },
+    "purpose": {
+        "basic_research": {
+            "theoretical_framework_development": false,
+            "new_model_development": true
+        },
+        "applied_research": {
+            "develop_new_methods_or_technologies": true,
+            "improve_existing_method": false
+        }
+    },
+    "method": {
+        "experiment": null,
+        "computational_simulation": {
+            "structure": {
+                "simulate_structural_stiffness": true,
+                "element_type": "Beam",
+                "simulate_site_conditions": true,
+                "site_structure_interaction": "Integrated",
+                "spatial_scope_determination": null,
+                "simulate_material_deterioration": false,
+                "decay_type": null,
+                "simulate_structural_aerodynamics": false,
+                "areodynamic_range": null,
+                "others": null
+            },
+            "disaster": [
+                {
+                    "hazard": {
+                        "earthquake": true,
+                        "strong_wind": null,
+                        "scour": null,
+                        "soil_liquefication": null,
+                        "tsunami": true,
+                        "landslide": null,
+                        "corrosion": null,
+                        "storm_surge": null,
+                        "flooding": null,
+                        "ground_moving": null,
+                        "fire": null,
+                        "explosion": null,
+                        "climate_change": null
+                    },
+                    "external_load": false,
+                    "modal_refinement": true
+                }
+            ]
+        }
+    },
+    "topic": {
+        "hazard": {
+            "hazard_identification": true,
+            "comprehending_the_interactions": true,
+            "quantifying_probability_of_hazards": false
+        },
+        "damage": {
+            "demand_or_capacity": "Capacity",
+            "vulnerable_components": [
+                "Bridge deck",
+                "Bridge column"
+            ],
+            "damage_index": null,
+            "failure_mode": [
+                "Plastic hinge formation",
+                "Exceeding drift limit states"
+            ]
+        },
+        "risk": {
+            "IM": [
+                "Spectral acceleration",
+                "Hydrodynamic force"
+            ],
+            "EDP": [
+                "Deck drift",
+                "Pile displacement"
+            ],
+            "fragility_development_method": "Incremental dynamic analysis",
+            "workflow": null
+        },
+        "loss": null,
+        "resilience": null
+    }
+}
