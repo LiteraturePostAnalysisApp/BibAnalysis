@@ -2,6 +2,7 @@ from pydantic import BaseModel, Field
 from openai import OpenAI
 from typing import Optional, Literal
 from pathlib import Path
+from loguru import logger
 import json
 import os
 
@@ -226,8 +227,6 @@ class ArticleSummary(BaseModel):
     purpose: ResearchPurpose
     method: ResearchMethod
     topic: Topic
-    
-
 
 def get_article_content(path):
     content = []
@@ -235,8 +234,6 @@ def get_article_content(path):
         content = f.read()
     return content
         
-
-
 def get_article_summary(text: str, SummaryPrompt:str, MODEL:str = Literal["gpt-4o-2024-08-06","gpt-4o-mini-2024-07-18"]):
     completion = client.beta.chat.completions.parse(
         model=MODEL,
@@ -250,25 +247,130 @@ def get_article_summary(text: str, SummaryPrompt:str, MODEL:str = Literal["gpt-4
 
     return completion.choices[0].message.parsed
 
+def extract_title_url_from_context(context: str, image_url: str) -> tuple[str, str]:
+    class Picture(BaseModel):
+        whole_fig_name: str
+        url: str
+                
+    # Call GPT to get complete image description and URL
+    prompt = f"""
+    Based on the following context, please provide the figure URL(e.g. 'images/picture.jpg') and full title(e.g. 'Fig. X. Flowchart for something'  ):
+    Image URL: {image_url}
+    Image context:
+    {context}
+    """
+    extraction = client.beta.chat.completions.parse(
+        model="gpt-4o-mini-2024-07-18", # save money with gpt-4o-mini
+        temperature=0.2,
+        messages=[{"role": "user", "content": prompt}],
+        response_format=Picture,
+    )
+    extraction_result = extraction.choices[0].message.parsed
+    title = extraction_result.whole_fig_name
+    image_url = extraction_result.url
+    return title,image_url
+
+SummaryPrompt = """
+    Analyze the provided PDF document on multi-hazard and bridge engineering to extract and analyze key insights. 
+    Perform an in-depth reading, focusing on the following aspects:\n\n
+    1. Whether multi-hazard risks need to be considered and, if so, how they should be accounted for.\n
+    2. Identify if the document discusses vulnerable components and possible failure modes of bridge structures undervarious hazards.\n
+    3. Provide an overview of the principles or recommended methods for conducting hazard simulations.
+    """
+
+RolePrompt = """
+    Role: You are a professional scientific literature image analyst. Your task is to provide a clear and concise analysis of images in scientific literature.
+    1.Briefly identify the image type (e.g., photo, chart, microscopy, etc.).
+    2.Summarize the main content or key features of the image.
+    3.Highlight any important information in the image that may be useful for future research.
+    4.Suggest a possible scientific hypothesis or conclusion based on the image and content.
+    5.Evaluate the image's significance in supporting the research or findings.
+    
+    Guidelines:
+    Use concise, objective language in your analysis, and ensure your comments are based on information visible in the image.
+    If the image lacks sufficient detail to make a clear conclusion, note that additional context or background is needed.
+    """
 
 if __name__ == "__main__":
     MODEL="gpt-4o-2024-08-06"
-    SummaryPrompt = "Analyze the provided PDF document on multi-hazard and bridge engineering to extract and analyze key insights. \
-                    Perform an in-depth reading, focusing on the following aspects:\n\n\
-                    1. Whether multi-hazard risks need to be considered and, if so, how they should be accounted for.\n\
-                    2. Identify if the document discusses vulnerable components and possible failure modes of bridge structures under various hazards.\n\
-                    3. Provide an overview of the principles or recommended methods for conducting hazard simulations."
+
     articles = [
-        Path("./articles/Carey et al_2019_Multihazard Earthquake and Tsunami Effects on Soil-Foundation-Bridge Systems.md"),
+        Path("./articles/Wu et al_2024_Multihazard resilience and economic loss evaluation method for cable-stayed.md"),    
+        # Path("./articles/Carey et al_2019_Multihazard Earthquake and Tsunami Effects on Soil-Foundation-Bridge Systems.md"),
     ]
+    
+    from GeneralAgent import Agent
+    import re
+    
+    for article in articles:
+        logger.opt(colors=True).info(f"Processing article: <yellow>{article.stem}</yellow>")
+        content = get_article_content(article)
+        
+        # 提取图片描述和URL的正则表达式
+        image_pattern = r'!\[(.*?)\]\((.*?)\)'
+        
+        # 提取所有图片描述和URL
+        image_matches = re.findall(image_pattern, content)
+        # 更新的content
+        updated_content = content
+        
+        for description, image_url in image_matches:
+            # 获取图片前3句话和后5句话
+            image_index = content.index(image_url)
+            before_image = content[:image_index].split('.')[-3:]
+            after_image = content[image_index:].split('.')[1:6]
+            context = '.'.join(['Before Figure loc:'] + before_image +   ['Figure loc:'] + [description] + ['After Figure loc:'] + after_image)
+
+            # 检查上下文中是否存在"Fig.X"或"fig.X"格式的字段，包括点号前后有无空格的情况
+            fig_pattern = r'[Ff]ig\s*\.?\s*\d+\.'
+            fig_match = re.search(fig_pattern, context)
+            if fig_match:
+                fig_reference = fig_match.group()
+                # 在全文中搜索该字段
+                full_context_match = re.search(f'(.{{0,300}}{re.escape(fig_reference)}.{{0,300}})', content)
+                if full_context_match:
+                    mentionedcontext = full_context_match.group(1)
+
+            # 清理上下文，确保句子完整
+            mentionedcontext = re.sub(r'^\S+\s', '', mentionedcontext)  # 移除开头的不完整句子
+            mentionedcontext = re.sub(r'\s\S+$', '', mentionedcontext)  # 移除结尾的不完整句子
+            
+            title, new_image_url = extract_title_url_from_context(context=context,image_url=image_url)
+            imagepath = article.parent / new_image_url
+            
+            agent = Agent(role=RolePrompt, api_key=API_KEY, base_url=BASE_URL, disable_python_run=True, model=MODEL)
+            vision_description = agent.user_input([f'Describe what can you see and refer from the image? \
+                This figure is mentioned in :\n\n{mentionedcontext}\n\
+                and this figure has a context:{context}\n\
+                Please conduct your analysis using objective, professional language, and ensure your comments are based on information visible in the image.',
+                {'image': str(imagepath.absolute())}])
+            # 去除过多的空行并放入引用块
+            vision_description = "\n> " + vision_description.replace('\n+', '\n').replace('\n', '\n> ')
+            # 也可以放入html的注释块
+            # vision_description = f'<!-- {vision_description.replace('\n+', '\n')} -->'
+            
+            logger.opt(colors=True).success(f"<yellow>{title}</yellow> at path:{str(imagepath.relative_to(Path('.')))} description get!")
+            logger.info(f"图片分析结果:\n{vision_description}")
+            
+            # 更新图片描述
+            old_image_tag = f'![{description}]({image_url})'
+            new_image_tag = f'![{title}]({image_url}){vision_description}'
+            updated_content = updated_content.replace(old_image_tag, new_image_tag)
+    
+    # 将更新后的内容写回文件
+    with open(article, 'w', encoding='utf-8') as f:
+        f.write(updated_content)
+    
+    logger.opt(colors=True).success(f"已更新 {article} 中的图片描述")
+             
     for article in articles:
         content = get_article_content(article)
         summary = get_article_summary(content, SummaryPrompt, MODEL)
         
         if hasattr(summary, 'refusal'):
-            print(f"文章 {article} 被拒绝回答")
+            logger.opt(colors=True).error(f"文章 <yellow>{article}</yellow> 被拒绝回答")
             if summary.refusal_details:
-                print(f"拒绝详情: {summary.refusal}")
+                logger.opt(colors=True).error(f"拒绝详情: <red>{summary.refusal}</red>")
             continue
         
         # 将摘要保存为JSON文件
@@ -276,7 +378,7 @@ if __name__ == "__main__":
         with open(output_filename, 'w', encoding='utf-8') as f:
             json.dump(summary.model_dump(), f, ensure_ascii=False, indent=4)
         
-        print(f"已成功保存结果到 {output_filename}")
+        logger.opt(colors=True).success(f"已成功保存结果到 {output_filename}")
 
 
 

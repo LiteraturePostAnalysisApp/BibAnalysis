@@ -49,7 +49,7 @@ In addition, Table  1  lists the spectral acceleration,  $S_{a}$  , assuming  $5
 Tsunami forces on structures are classi ﬁ ed as (1) hydrodynamic forces, (2) hydrostatic and buoyant forces, (3) impulsive surge forces, (4) debris impact forces, and (5) debris damming forces ( Yeh 2009 ;  FEMA 2012 ;  Yeh et al. 2015 ). The focus herein is on horizontal hydrodynamic forces during steady- ﬂ ow conditions (i.e., the load applied to the bridge during tsunami inundation). Other hydrodynamic forces, such as uplift and slamming forces, and the effect of large debris ( Ko et al. 2015 ), have a great impact on struc- tures but are not considered herein. The magnitude of the horizontal hydrodynamic force,  $F_{D},$  , is given as ( FEMA 2012 )  
 
 $$
-F_{D}=\frac{1}{2}\leftC_{D}\rho B\big(h u^{2}\big)_{\mathrm{max}}\right.
+F_{D}=\frac{1}{2}C_{D}\rho B\big(h u^{2}\big)_{\mathrm{max}}.
 $$  
 
 where    $C_{D}=$   drag coef ﬁ cient of the enveloped object;  $\rho=$   ﬂ uid density;  $B\!=$  out-of-plane breadth of the object; and   $(h u^{2})_{\mathrm{max}}$   is the maximum momentum  ﬂ ux per unit mass, where    $h$   is the  ﬂ ow height, and  $u$   is the  ﬂ ow velocity, whose maxima do not necessar- ily co-occur.  

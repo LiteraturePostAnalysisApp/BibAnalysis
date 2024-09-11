@@ -4,6 +4,8 @@ from collections import defaultdict, namedtuple
 from typing import Union
 import pyzotero
 from loguru import logger
+import requests
+from bs4 import BeautifulSoup
 
 class Article(AbstractRetrieval):
     def __init__(self,
@@ -90,15 +92,43 @@ class Article(AbstractRetrieval):
         logger.info(f"Article Info of DOI:{self.identifier} Add to Zotero with item_key:{zotero_item_key}")
         return zotero_item_key
     
-    def get_pdf_from_scihub(self):
-        """get the pdf from scihub"""
-        raise NotImplementedError
-        try:
-            pdf_path = self.download_pdf()
-            logger.info(f"Article Info of DOI:{self.identifier} Get PDF from Scihub with path:{pdf_path}")
-        except Exception as e:
-            logger.warning(f"Fail to get PDF from Scihub for Article Info of DOI:{self.identifier}! \n Mainly because of VPN Usage or Network Error:{e}")
-        return pdf_path 
+    def get_pdf_from_scihub(self, doi=None):
+        """get the pdf from scihub, return the pdf file name
+        if doi is not specified, use the doi of the current article"""
+        scihub_url = 'https://sci-hub.se/'
+        if not doi:
+            doi = self.doi
+        search_url = scihub_url + doi
+        
+        # Step 1: Get the SciHub page for the DOI
+        response = requests.get(search_url)
+        if response.status_code != 200:
+            raise Exception('Failed to retrieve the page from SciHub')
+
+        soup = BeautifulSoup(response.content, 'html.parser')
+        
+        # Step 2: Find the PDF download link in the page
+        iframe = soup.find('iframe')
+        if not iframe:
+            raise Exception('PDF link not found on SciHub page')
+        
+        pdf_url = iframe.get('src')
+        if not pdf_url.startswith('http'):
+            pdf_url = 'https:' + pdf_url
+        
+        # Step 3: Download the PDF
+        pdf_response = requests.get(pdf_url, stream=True)
+        if pdf_response.status_code != 200:
+            logger.warning('Failed to download the PDF from SciHub')
+            raise Exception('Failed to download the PDF from SciHub')
+        
+        file_name = f'{doi.replace("/", "_")}.pdf'
+        with open(file_name, 'wb') as pdf_file:
+            for chunk in pdf_response.iter_content(chunk_size=1024):
+                pdf_file.write(chunk)
+        
+        logger.info(f'PDF successfully downloaded as {file_name}')
+        return file_name
 
     def refresh(self):
         """refresh the article"""
@@ -151,6 +181,7 @@ class Author(AuthorRetrieval):
         logger.info(f"Author Info of author_id:{self.author_id} Refreshed!")
 
 
+
 class Affiliation(AffiliationRetrieval):
     def __init__(self,aff_id: Union[int, str],refresh: Union[bool, int] = False,view: str = "STANDARD",**kwds: str) -> None:
         """
@@ -195,6 +226,7 @@ class Affiliation(AffiliationRetrieval):
 
 if __name__ == "__main__":
     a = Article("10.1016/j.softx.2019.100263")
+    pdf_file = a.get_pdf_from_scihub()
     a.refresh()
     print(a)
     print(a.authors)

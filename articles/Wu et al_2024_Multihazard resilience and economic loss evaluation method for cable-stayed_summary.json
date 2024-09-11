@@ -1,46 +1,51 @@
 {
     "basic_info": {
-        "title": "Multihazard Earthquake and Tsunami Effects on Soil – Foundation – Bridge Systems",
+        "title": "Multihazard resilience and economic loss evaluation method for cable-stayed bridges under the combined effects of scour and earthquakes",
         "keywords": [
-            "Earthquake",
-            "Soil – structure interaction",
-            "Tsunami",
-            "Bridges",
-            "OpenSees",
-            "Finite element",
-            "Multihazard"
+            "Cable-stayed bridges",
+            "Seismic hazard",
+            "Scour hazard",
+            "Multihazard fragility analysis",
+            "Resilience",
+            "Economic loss",
+            "Traffic capacity evaluation"
         ],
         "authors": [
             {
-                "name": "Trevor J. Carey",
-                "affiliation": null,
+                "name": "Guo-Yi Wu",
+                "affiliation": "State Key Laboratory of Coastal and Offshore Engineering, Dalian University of Technology, Dalian 116024, China",
                 "email": null
             },
             {
-                "name": "H. Benjamin Mason",
-                "affiliation": null,
+                "name": "Chun-Guang Liu",
+                "affiliation": "State Key Laboratory of Coastal and Offshore Engineering, Dalian University of Technology, Dalian 116024, China",
                 "email": null
             },
             {
-                "name": "Andre R. Barbosa",
-                "affiliation": null,
+                "name": "Zhi-Qian Dong",
+                "affiliation": "State Key Laboratory of Coastal and Offshore Engineering, Dalian University of Technology, Dalian 116024, China",
                 "email": null
             },
             {
-                "name": "Michael H. Scott",
-                "affiliation": null,
+                "name": "Hui-Dong Liu",
+                "affiliation": "China Construction Third Engineering Bureau Group Co., LTD, Urumqi 830000, China",
+                "email": null
+            },
+            {
+                "name": "Faizan Ali",
+                "affiliation": "Institut de Ciencia de Materials de Barcelona (ICMAB-CSIC), Campus UAB, Bellaterra 08193, Spain",
                 "email": null
             }
         ],
-        "doi": "10.1061/(ASCE)BE.1943-5592.0001353"
+        "doi": null
     },
     "research_subject": {
         "hazard": {
             "earthquake": true,
             "strong_wind": null,
-            "scour": null,
+            "scour": true,
             "soil_liquefication": null,
-            "tsunami": true,
+            "tsunami": null,
             "landslide": null,
             "corrosion": null,
             "storm_surge": null,
@@ -51,16 +56,16 @@
             "climate_change": null
         },
         "bridge": {
-            "beam_bridge": true,
+            "beam_bridge": false,
             "arch_bridge": false,
-            "cable_stayed_bridge": false,
+            "cable_stayed_bridge": true,
             "suspension_bridge": false
         }
     },
     "spatialtemporal_characteristics": {
         "time_scale": {
-            "single_disaster_combination": false,
-            "multiple_disaster_chain": true,
+            "single_disaster_combination": true,
+            "multiple_disaster_chain": false,
             "life_cycle": false
         },
         "spatial_scale": {
@@ -106,9 +111,9 @@
                     "hazard": {
                         "earthquake": true,
                         "strong_wind": null,
-                        "scour": null,
+                        "scour": true,
                         "soil_liquefication": null,
-                        "tsunami": true,
+                        "tsunami": null,
                         "landslide": null,
                         "corrosion": null,
                         "storm_surge": null,
@@ -128,33 +133,54 @@
         "hazard": {
             "hazard_identification": true,
             "comprehending_the_interactions": true,
-            "quantifying_probability_of_hazards": false
+            "quantifying_probability_of_hazards": true
         },
         "damage": {
-            "demand_or_capacity": "Capacity",
+            "demand_or_capacity": "Demand",
             "vulnerable_components": [
-                "Bridge piers",
-                "Superstructure"
+                "Bearings",
+                "Pylons"
             ],
             "damage_index": null,
-            "failure_mode": [
-                "Plastic hinge formation",
-                "Residual displacement"
-            ]
+            "failure_mode": null
         },
         "risk": {
             "IM": [
-                "Spectral acceleration",
-                "Hydrodynamic force"
+                "PGA",
+                "Scour depth"
             ],
             "EDP": [
-                "Deck drift",
-                "Pile displacement"
+                "Pylon top drift rate",
+                "Pier section curvature ductility",
+                "Bearing shear strain",
+                "Cable strain ratio"
             ],
-            "fragility_development_method": "Incremental dynamic analysis",
+            "fragility_development_method": "IDA",
             "workflow": null
         },
-        "loss": null,
-        "resilience": null
+        "loss": {
+            "direct_loss": true,
+            "indirect_loss": true,
+            "lifeline_infrastructure_modeling": false,
+            "loss_uncertainty_modeling": true,
+            "rapid_loss_estimation": false
+        },
+        "resilience": {
+            "goal": {
+                "material_performance": false,
+                "structural_resilience": true,
+                "regional_resilience": false
+            },
+            "quantification": {
+                "risk_sources_and_performance_index": null,
+                "quantitative": true,
+                "qualitative": false
+            },
+            "measures": {
+                "preparedness": false,
+                "mitigation": false,
+                "recovery": true
+            }
+        }
     }
 }
