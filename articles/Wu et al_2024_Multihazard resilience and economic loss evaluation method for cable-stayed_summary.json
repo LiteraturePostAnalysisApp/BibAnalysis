@@ -14,26 +14,31 @@
             {
                 "name": "Guo-Yi Wu",
                 "affiliation": "State Key Laboratory of Coastal and Offshore Engineering, Dalian University of Technology, Dalian 116024, China",
+                "Country": "China",
                 "email": null
             },
             {
                 "name": "Chun-Guang Liu",
                 "affiliation": "State Key Laboratory of Coastal and Offshore Engineering, Dalian University of Technology, Dalian 116024, China",
+                "Country": "China",
                 "email": null
             },
             {
                 "name": "Zhi-Qian Dong",
                 "affiliation": "State Key Laboratory of Coastal and Offshore Engineering, Dalian University of Technology, Dalian 116024, China",
+                "Country": "China",
                 "email": null
             },
             {
                 "name": "Hui-Dong Liu",
                 "affiliation": "China Construction Third Engineering Bureau Group Co., LTD, Urumqi 830000, China",
+                "Country": "China",
                 "email": null
             },
             {
                 "name": "Faizan Ali",
                 "affiliation": "Institut de Ciencia de Materials de Barcelona (ICMAB-CSIC), Campus UAB, Bellaterra 08193, Spain",
+                "Country": "Spain",
                 "email": null
             }
         ],
@@ -66,7 +71,7 @@
         "time_scale": {
             "single_disaster_combination": true,
             "multiple_disaster_chain": false,
-            "life_cycle": false
+            "life_cycle": true
         },
         "spatial_scale": {
             "component": false,
@@ -132,8 +137,8 @@
     "topic": {
         "hazard": {
             "hazard_identification": true,
-            "comprehending_the_interactions": true,
-            "quantifying_probability_of_hazards": true
+            "comprehending_the_interactions": false,
+            "quantifying_probability_of_hazards": false
         },
         "damage": {
             "demand_or_capacity": "Demand",
@@ -176,11 +181,7 @@
                 "quantitative": true,
                 "qualitative": false
             },
-            "measures": {
-                "preparedness": false,
-                "mitigation": false,
-                "recovery": true
-            }
+            "measures": null
         }
     }
 }

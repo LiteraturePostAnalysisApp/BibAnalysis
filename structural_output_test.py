@@ -13,6 +13,7 @@ client = OpenAI(api_key=API_KEY, base_url=BASE_URL)
 class Author(BaseModel):
     name: str
     affiliation: Optional[str]
+    Country: Optional[str]
     email: Optional[str]
     
 class BasicInfo(BaseModel):
@@ -281,14 +282,10 @@ SummaryPrompt = """
 RolePrompt = """
     Role: You are a professional scientific literature image analyst. Your task is to provide a clear and concise analysis of images in scientific literature.
     1.Briefly identify the image type (e.g., photo, chart, microscopy, etc.).
-    2.Summarize the main content or key features of the image.
-    3.Highlight any important information in the image that may be useful for future research.
-    4.Suggest a possible scientific hypothesis or conclusion based on the image and content.
-    5.Evaluate the image's significance in supporting the research or findings.
+    2.Summarize the main content and key values/features of the image.
     
     Guidelines:
-    Use concise, objective language in your analysis, and ensure your comments are based on information visible in the image.
-    If the image lacks sufficient detail to make a clear conclusion, note that additional context or background is needed.
+    Use concise, objective language in your analysis, and ensure your comments are based on information visible in the image. Highlight important information.
     """
 
 if __name__ == "__main__":
@@ -345,7 +342,7 @@ if __name__ == "__main__":
                 Please conduct your analysis using objective, professional language, and ensure your comments are based on information visible in the image.',
                 {'image': str(imagepath.absolute())}])
             # 去除过多的空行并放入引用块
-            vision_description = "\n> " + vision_description.replace('\n+', '\n').replace('\n', '\n> ')
+            vision_description = f"\n> {title}\n> "+ vision_description.replace('\n+', '\n').replace('\n', '\n> ')
             # 也可以放入html的注释块
             # vision_description = f'<!-- {vision_description.replace('\n+', '\n')} -->'
             
